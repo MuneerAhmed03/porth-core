@@ -25,9 +25,9 @@ describe('Storage browser fallback (IndexedDB)', () => {
 
   it('set then get returns the same value', async () => {
     const Storage = await getStorageModule()
-    await Storage.set('name', 'portl')
+    await Storage.set('name', 'porth')
     const value = await Storage.get<string>('name')
-    expect(value).toBe('portl')
+    expect(value).toBe('porth')
   })
 
   it('get on missing key returns null', async () => {

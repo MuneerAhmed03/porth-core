@@ -32,7 +32,7 @@ describe('initDB', () => {
     const { initDB } = await getMigratorModule()
     await initDB({ migrations: [] })
 
-    expect(queryMock.mock.calls[0]?.[0]).toContain('CREATE TABLE IF NOT EXISTS __portl_migrations')
+    expect(queryMock.mock.calls[0]?.[0]).toContain('CREATE TABLE IF NOT EXISTS __porth_migrations')
   })
 
   it('applies pending migrations in folderMillis order', async () => {
@@ -70,7 +70,7 @@ describe('initDB', () => {
     })
 
     expect(queryMock).toHaveBeenCalledWith(
-      'INSERT INTO __portl_migrations (hash, applied_at) VALUES (?, ?)',
+      'INSERT INTO __porth_migrations (hash, applied_at) VALUES (?, ?)',
       ['h1', 123456]
     )
     nowSpy.mockRestore()
@@ -87,7 +87,7 @@ describe('initDB', () => {
       initDB({
         migrations: [{ hash: 'boom', folderMillis: 1, sql: ['FAIL SQL'], bps: false }]
       })
-    ).rejects.toThrow('portl migration failed at boom: near "FAIL": syntax error')
+    ).rejects.toThrow('porth migration failed at boom: near "FAIL": syntax error')
   })
 
   it('includes migration tag when a tagged migration statement fails', async () => {
@@ -103,7 +103,7 @@ describe('initDB', () => {
           { hash: 'boom', tag: '0001_tagged', folderMillis: 1, sql: ['FAIL SQL'], bps: false }
         ]
       })
-    ).rejects.toThrow('portl migration failed at 0001_tagged (boom): near "FAIL": syntax error')
+    ).rejects.toThrow('porth migration failed at 0001_tagged (boom): near "FAIL": syntax error')
   })
 
   it('is idempotent when called twice with same migrations', async () => {
@@ -117,7 +117,7 @@ describe('initDB', () => {
       if (sql.startsWith('SELECT hash FROM')) {
         return [...appliedHashes].map((hash) => ({ hash }))
       }
-      if (sql.startsWith('INSERT INTO __portl_migrations')) {
+      if (sql.startsWith('INSERT INTO __porth_migrations')) {
         const hash = String(params?.[0] ?? '')
         appliedHashes.add(hash)
         return { changes: 1, lastInsertRowid: 1 }
@@ -153,7 +153,7 @@ describe('initDB', () => {
     const { initDB } = await getMigratorModule()
 
     await expect(initDB({ migrationsTable: 'bad; DROP TABLE notes', migrations: [] })).rejects.toThrow(
-      'portl migration table name is invalid: bad; DROP TABLE notes'
+      'porth migration table name is invalid: bad; DROP TABLE notes'
     )
     expect(queryMock).not.toHaveBeenCalled()
   })
@@ -175,7 +175,7 @@ describe('initDB', () => {
     expect(queryMock.mock.calls[2]?.[0]).toBe('BEGIN')
     expect(queryMock.mock.calls[3]?.[0]).toBe('CREATE TABLE one (id INTEGER)')
     expect(queryMock.mock.calls[4]?.[0]).toBe('ALTER TABLE one ADD COLUMN name TEXT')
-    expect(queryMock.mock.calls[5]?.[0]).toBe('INSERT INTO __portl_migrations (hash, applied_at) VALUES (?, ?)')
+    expect(queryMock.mock.calls[5]?.[0]).toBe('INSERT INTO __porth_migrations (hash, applied_at) VALUES (?, ?)')
     expect(queryMock.mock.calls[6]?.[0]).toBe('COMMIT')
   })
 })

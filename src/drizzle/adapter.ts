@@ -9,7 +9,7 @@ type DrizzleResult = { rows: unknown[] }
 type DrizzleQuery = (sql: string, params: unknown[], method: DrizzleMethod) => Promise<DrizzleResult>
 type DrizzleBatchQuery = (queries: { sql: string; params: unknown[]; method: DrizzleMethod }[]) => Promise<DrizzleResult[]>
 
-function createPortlDriver(ensureReady?: () => Promise<void>): DrizzleQuery {
+function createPorthDriver(ensureReady?: () => Promise<void>): DrizzleQuery {
   return async (sql: string, params: unknown[], method: DrizzleMethod): Promise<DrizzleResult> => {
     if (ensureReady) {
       await ensureReady()
@@ -18,7 +18,7 @@ function createPortlDriver(ensureReady?: () => Promise<void>): DrizzleQuery {
   }
 }
 
-function createPortlBatchDriver(driver: DrizzleQuery): DrizzleBatchQuery {
+function createPorthBatchDriver(driver: DrizzleQuery): DrizzleBatchQuery {
   return async (queries) => {
     const results: DrizzleResult[] = []
     for (const query of queries) {
@@ -28,7 +28,7 @@ function createPortlBatchDriver(driver: DrizzleQuery): DrizzleBatchQuery {
   }
 }
 
-function createReadyPortlDriver(config: MigrationConfig): DrizzleQuery {
+function createReadyPorthDriver(config: MigrationConfig): DrizzleQuery {
   let readyPromise: Promise<void> | null = null
 
   function ensureReady(): Promise<void> {
@@ -38,7 +38,7 @@ function createReadyPortlDriver(config: MigrationConfig): DrizzleQuery {
     return readyPromise
   }
 
-  return createPortlDriver(ensureReady)
+  return createPorthDriver(ensureReady)
 }
 
 export function createDB(): SqliteRemoteDatabase
@@ -48,21 +48,21 @@ export function createDB<TSchema extends Record<string, unknown>>(
 export function createDB<TSchema extends Record<string, unknown>>(
   schema?: TSchema
 ): SqliteRemoteDatabase | SqliteRemoteDatabase<TSchema> {
-  const driver = createPortlDriver()
-  return drizzleSqliteProxy(driver, createPortlBatchDriver(driver), {
+  const driver = createPorthDriver()
+  return drizzleSqliteProxy(driver, createPorthBatchDriver(driver), {
     schema
   }) as SqliteRemoteDatabase | SqliteRemoteDatabase<TSchema>
 }
 
-export function createPortlDrizzle(config: MigrationConfig): SqliteRemoteDatabase
-export function createPortlDrizzle<TSchema extends Record<string, unknown>>(
+export function createPorthDrizzle(config: MigrationConfig): SqliteRemoteDatabase
+export function createPorthDrizzle<TSchema extends Record<string, unknown>>(
   config: MigrationConfig & { schema: TSchema }
 ): SqliteRemoteDatabase<TSchema>
-export function createPortlDrizzle<TSchema extends Record<string, unknown>>(
+export function createPorthDrizzle<TSchema extends Record<string, unknown>>(
   config: MigrationConfig & { schema?: TSchema }
 ): SqliteRemoteDatabase | SqliteRemoteDatabase<TSchema> {
-  const driver = createReadyPortlDriver(config)
-  return drizzleSqliteProxy(driver, createPortlBatchDriver(driver), {
+  const driver = createReadyPorthDriver(config)
+  return drizzleSqliteProxy(driver, createPorthBatchDriver(driver), {
     schema: config.schema
   }) as SqliteRemoteDatabase | SqliteRemoteDatabase<TSchema>
 }

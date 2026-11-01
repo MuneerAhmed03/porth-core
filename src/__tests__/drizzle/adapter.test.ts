@@ -152,24 +152,24 @@ describe('drizzle adapter', () => {
     expect(drizzleQueryMock.mock.calls.map((call) => call[2])).toEqual(['run', 'all'])
   })
 
-  it('createPortlDrizzle runs migrations before the first query', async () => {
+  it('createPorthDrizzle runs migrations before the first query', async () => {
     drizzleQueryMock.mockResolvedValueOnce({ rows: [[1]] })
-    const { createPortlDrizzle } = await getAdapterModule()
-    const db = createPortlDrizzle({
+    const { createPorthDrizzle } = await getAdapterModule()
+    const db = createPorthDrizzle({
       schema,
       migrations: [{ hash: 'h1', folderMillis: 1, sql: ['CREATE TABLE notes (id INTEGER)'], bps: false }]
     })
 
     await db.select({ id: notes.id }).from(notes)
 
-    expect(queryMock.mock.calls[0]?.[0]).toContain('CREATE TABLE IF NOT EXISTS __portl_migrations')
+    expect(queryMock.mock.calls[0]?.[0]).toContain('CREATE TABLE IF NOT EXISTS __porth_migrations')
     expect(queryMock).toHaveBeenCalledWith('CREATE TABLE notes (id INTEGER)')
     expect(drizzleQueryMock).toHaveBeenCalledTimes(1)
   })
 
-  it('createPortlDrizzle reuses the same bootstrap promise for later queries', async () => {
-    const { createPortlDrizzle } = await getAdapterModule()
-    const db = createPortlDrizzle({
+  it('createPorthDrizzle reuses the same bootstrap promise for later queries', async () => {
+    const { createPorthDrizzle } = await getAdapterModule()
+    const db = createPorthDrizzle({
       schema,
       migrations: [{ hash: 'h1', folderMillis: 1, sql: ['CREATE TABLE notes (id INTEGER)'], bps: false }]
     })
@@ -178,7 +178,7 @@ describe('drizzle adapter', () => {
     await db.insert(notes).values({ title: 'hello', body: 'body', createdAt: 100 })
 
     const migrationTableCreates = queryMock.mock.calls.filter(([statement]) =>
-      statement.includes('CREATE TABLE IF NOT EXISTS __portl_migrations')
+      statement.includes('CREATE TABLE IF NOT EXISTS __porth_migrations')
     )
     expect(migrationTableCreates).toHaveLength(1)
   })

@@ -72,7 +72,7 @@ beforeEach(() => {
     writable: true,
     value: { AndroidBridge: undefined } as Window
   })
-  globalThis.__portlSqlJsInit = async () => ({
+  globalThis.__porthSqlJsInit = async () => ({
     Database: InMemorySqlJsDatabase
   })
 })

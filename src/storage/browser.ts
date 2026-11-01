@@ -1,4 +1,4 @@
-const DB_NAME = 'portl'
+const DB_NAME = 'porth'
 const STORE_NAME = 'storage'
 const DB_VERSION = 1
 

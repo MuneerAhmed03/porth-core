@@ -1,7 +1,7 @@
 import { getBridge } from '../bridge'
 
 const ERROR_PREFIX = 'error:'
-const NULL_SENTINEL = '__portl_null__'
+const NULL_SENTINEL = '__porth_null__'
 
 function throwIfBridgeError(result: string): void {
   if (result.startsWith(ERROR_PREFIX)) {

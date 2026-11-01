@@ -34,7 +34,7 @@ describe('AndroidStorage', () => {
   })
 
   it('get returns null on sentinel value', async () => {
-    bridge.storageGet.mockReturnValueOnce('__portl_null__')
+    bridge.storageGet.mockReturnValueOnce('__porth_null__')
     const value = await storage.get('missing')
     expect(value).toBeNull()
   })

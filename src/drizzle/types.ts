@@ -1,4 +1,4 @@
-export interface PortlDriver {
+export interface PorthDriver {
   exec(sql: string, params?: unknown[]): Promise<unknown>
 }
 

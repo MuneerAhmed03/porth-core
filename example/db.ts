@@ -1,5 +1,5 @@
-import { createPortlDrizzle } from 'portl/drizzle'
+import { createPorthDrizzle } from 'porth/drizzle'
 import migrations from './migrations.generated'
 import { schema } from './schema'
 
-export const db = createPortlDrizzle({ schema, migrations })
+export const db = createPorthDrizzle({ schema, migrations })

@@ -21,7 +21,7 @@ type DrizzleMethod = 'run' | 'all' | 'values' | 'get'
 type DrizzleResult = { rows: unknown[] }
 
 declare global {
-  var __portlSqlJsInit: SqlJsInit | undefined
+  var __porthSqlJsInit: SqlJsInit | undefined
 }
 
 function mapSelectRows(result: SqlJsExecResult): Record<string, unknown>[] {
@@ -35,8 +35,8 @@ function mapSelectRows(result: SqlJsExecResult): Record<string, unknown>[] {
 }
 
 async function loadSqlJsInit(): Promise<SqlJsInit> {
-  if (typeof globalThis.__portlSqlJsInit !== 'undefined') {
-    return globalThis.__portlSqlJsInit
+  if (typeof globalThis.__porthSqlJsInit !== 'undefined') {
+    return globalThis.__porthSqlJsInit
   }
 
   try {
@@ -47,7 +47,7 @@ async function loadSqlJsInit(): Promise<SqlJsInit> {
     }
     return init as SqlJsInit
   } catch {
-    throw new Error('portl: failed to load sql.js from CDN. Check your internet connection.')
+    throw new Error('porth: failed to load sql.js from CDN. Check your internet connection.')
   }
 }
 

@@ -15,7 +15,7 @@ export const DB = {
     return impl.query<T>(sql, params)
   },
 
-  /** @internal Used by portl/drizzle to satisfy drizzle-orm/sqlite-proxy row-shape requirements. */
+  /** @internal Used by porth/drizzle to satisfy drizzle-orm/sqlite-proxy row-shape requirements. */
   __drizzleQuery(
     sql: string,
     params: unknown[] = [],

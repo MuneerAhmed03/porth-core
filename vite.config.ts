@@ -10,14 +10,14 @@ export default defineConfig(({ mode }) => {
       lib: isDrizzle
         ? {
             entry: 'src/drizzle/index.ts',
-            name: 'PortlDrizzle',
+            name: 'PorthDrizzle',
             fileName: 'drizzle',
             formats: ['es', 'umd']
           }
         : {
             entry: 'src/index.ts',
-            name: 'Portl',
-            fileName: 'portl',
+            name: 'Porth',
+            fileName: 'porth',
             formats: ['es', 'umd']
           },
       rollupOptions: {

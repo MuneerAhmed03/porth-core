@@ -1,21 +1,15 @@
 import { desc } from 'drizzle-orm'
 import { useEffect, useState } from 'react'
-import { db, setupDB } from './db'
+import { db } from './db'
 import { notes } from './schema'
 
 export default function App() {
-  const [ready, setReady] = useState(false)
   const [allNotes, setNotes] = useState<typeof notes.$inferSelect[]>([])
   const [input, setInput] = useState('')
 
   useEffect(() => {
-    setupDB().then(() => setReady(true))
-  }, [])
-
-  useEffect(() => {
-    if (!ready) return
     db.select().from(notes).orderBy(desc(notes.createdAt)).then(setNotes)
-  }, [ready])
+  }, [])
 
   async function addNote() {
     if (!input.trim()) return
@@ -27,8 +21,6 @@ export default function App() {
     setNotes(await db.select().from(notes).orderBy(desc(notes.createdAt)))
     setInput('')
   }
-
-  if (!ready) return <div>Loading...</div>
 
   return (
     <div>

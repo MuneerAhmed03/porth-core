@@ -1,25 +1,41 @@
 {
-  "name": "portl",
+  "name": "porth",
   "version": "0.1.0",
+  "description": "Durable local storage and SQLite for Vite apps on the web and Android",
   "type": "module",
-  "main": "./dist/portl.umd.cjs",
-  "module": "./dist/portl.js",
-  "types": "./types/index.d.ts",
+  "main": "./dist/porth.umd.cjs",
+  "module": "./dist/porth.js",
+  "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "import": "./dist/portl.js",
-      "require": "./dist/portl.umd.cjs",
-      "types": "./types/index.d.ts"
+      "types": "./dist/index.d.ts",
+      "import": "./dist/porth.js",
+      "require": "./dist/porth.umd.cjs"
     },
     "./drizzle": {
+      "types": "./dist/drizzle/index.d.ts",
       "import": "./dist/drizzle.js",
-      "require": "./dist/drizzle.umd.cjs",
-      "types": "./types/drizzle.d.ts"
+      "require": "./dist/drizzle.umd.cjs"
     }
   },
   "files": [
-    "dist",
-    "types"
+    "dist"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MuneerAhmed03/porth-core.git"
+  },
+  "homepage": "https://github.com/MuneerAhmed03/porth#readme",
+  "bugs": {
+    "url": "https://github.com/MuneerAhmed03/porth/issues"
+  },
+  "keywords": [
+    "vite",
+    "android",
+    "sqlite",
+    "indexeddb",
+    "drizzle",
+    "offline-first"
   ],
   "scripts": {
     "build": "vite build && vite build --mode drizzle",
