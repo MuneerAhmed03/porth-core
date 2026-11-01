@@ -40,7 +40,7 @@
   "scripts": {
     "build": "vite build && vite build --mode drizzle",
     "dev": "vite build --watch",
-    "test": "vitest"
+    "test": "vitest run"
   },
   "peerDependencies": {
     "drizzle-orm": ">=0.45.0 <1.0.0"
