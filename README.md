@@ -1,17 +1,17 @@
-# porth
+# porth-core
 
 Durable local storage and SQLite for Vite apps on the web and Android.
 
 > **Status: pre-alpha.** The API may change before `1.0`.
 
 ```bash
-npm install porth
+npm install porth-core
 ```
 
 ## Key-value storage
 
 ```ts
-import { Storage } from 'porth'
+import { Storage } from 'porth-core'
 
 await Storage.set('theme', 'dark')
 const theme = await Storage.get<string>('theme')
@@ -22,7 +22,7 @@ const theme = await Storage.get<string>('theme')
 ## SQLite
 
 ```ts
-import { DB } from 'porth'
+import { DB } from 'porth-core'
 
 await DB.query(
   'CREATE TABLE IF NOT EXISTS notes (id INTEGER PRIMARY KEY, title TEXT NOT NULL)'
@@ -37,7 +37,7 @@ The browser build uses `sql.js`; Android uses the device SQLite through the Port
 ## Drizzle
 
 ```ts
-import { createPorthDrizzle } from 'porth/drizzle'
+import { createPorthDrizzle } from 'porth-core/drizzle'
 import migrations from './migrations.generated'
 import { schema } from './schema'
 

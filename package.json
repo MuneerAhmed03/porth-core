@@ -1,5 +1,5 @@
 {
-  "name": "porth",
+  "name": "porth-core",
   "version": "0.1.0",
   "description": "Durable local storage and SQLite for Vite apps on the web and Android",
   "type": "module",
