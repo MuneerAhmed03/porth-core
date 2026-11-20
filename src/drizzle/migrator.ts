@@ -15,7 +15,7 @@ function getMigrationsTable(config: MigrationConfig): string {
 export async function initDB(config: MigrationConfig): Promise<void> {
   const migrationsTable = getMigrationsTable(config)
 
-  await DB.query(
+  await DB.exec(
     `CREATE TABLE IF NOT EXISTS ${migrationsTable} (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       hash TEXT NOT NULL UNIQUE,
@@ -23,7 +23,7 @@ export async function initDB(config: MigrationConfig): Promise<void> {
     )`
   )
 
-  const existingRows = await DB.query<Array<{ hash: string }>>(`SELECT hash FROM ${migrationsTable}`)
+  const existingRows = await DB.all<{ hash: string }>(`SELECT hash FROM ${migrationsTable}`)
   const appliedHashes = new Set(existingRows.map((row) => row.hash))
   const orderedMigrations = [...config.migrations].sort((a, b) => a.folderMillis - b.folderMillis)
 
@@ -33,18 +33,18 @@ export async function initDB(config: MigrationConfig): Promise<void> {
     }
 
     try {
-      await DB.query('BEGIN')
+      await DB.exec('BEGIN')
       for (const sql of migration.sql) {
-        await DB.query(sql)
+        await DB.exec(sql)
       }
 
-      await DB.query(`INSERT INTO ${migrationsTable} (hash, applied_at) VALUES (?, ?)`, [
+      await DB.exec(`INSERT INTO ${migrationsTable} (hash, applied_at) VALUES (?, ?)`, [
         migration.hash,
         Date.now()
       ])
-      await DB.query('COMMIT')
+      await DB.exec('COMMIT')
     } catch (error) {
-      await DB.query('ROLLBACK').catch(() => undefined)
+      await DB.exec('ROLLBACK').catch(() => undefined)
       const message = error instanceof Error ? error.message : String(error)
       const label = migration.tag ? `${migration.tag} (${migration.hash})` : migration.hash
       throw new Error(`porth migration failed at ${label}: ${message}`)

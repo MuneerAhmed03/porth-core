@@ -1,13 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { MigrationMeta } from '../../drizzle/types'
 
-const { queryMock } = vi.hoisted(() => ({
-  queryMock: vi.fn<[string, unknown[]?], Promise<unknown>>()
+const { execMock, allMock } = vi.hoisted(() => ({
+  execMock: vi.fn<[string, unknown[]?], Promise<unknown>>(),
+  allMock: vi.fn<[string, unknown[]?], Promise<unknown>>()
 }))
 
 vi.mock('../../db/index', () => ({
   DB: {
-    query: queryMock
+    exec: execMock,
+    all: allMock
   }
 }))
 
@@ -25,14 +27,15 @@ function makeMigrations(): MigrationMeta[] {
 describe('initDB', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    queryMock.mockResolvedValue([])
+    execMock.mockResolvedValue(undefined)
+    allMock.mockResolvedValue([])
   })
 
   it('creates migrations table on first call', async () => {
     const { initDB } = await getMigratorModule()
     await initDB({ migrations: [] })
 
-    expect(queryMock.mock.calls[0]?.[0]).toContain('CREATE TABLE IF NOT EXISTS __porth_migrations')
+    expect(execMock.mock.calls[0]?.[0]).toContain('CREATE TABLE IF NOT EXISTS __porth_migrations')
   })
 
   it('applies pending migrations in folderMillis order', async () => {
@@ -41,24 +44,21 @@ describe('initDB', () => {
 
     await initDB({ migrations: makeMigrations() })
 
-    expect(queryMock.mock.calls[2]?.[0]).toBe('BEGIN')
-    expect(queryMock.mock.calls[3]?.[0]).toBe('CREATE TABLE a (id INTEGER)')
-    expect(queryMock.mock.calls[6]?.[0]).toBe('BEGIN')
-    expect(queryMock.mock.calls[7]?.[0]).toBe('CREATE TABLE b (id INTEGER)')
+    expect(execMock.mock.calls[1]?.[0]).toBe('BEGIN')
+    expect(execMock.mock.calls[2]?.[0]).toBe('CREATE TABLE a (id INTEGER)')
+    expect(execMock.mock.calls[5]?.[0]).toBe('BEGIN')
+    expect(execMock.mock.calls[6]?.[0]).toBe('CREATE TABLE b (id INTEGER)')
     nowSpy.mockRestore()
   })
 
   it('skips already-applied migrations', async () => {
     const { initDB } = await getMigratorModule()
-    queryMock
-      .mockResolvedValueOnce({ changes: 0, lastInsertRowid: 0 })
-      .mockResolvedValueOnce([{ hash: 'a' }])
-      .mockResolvedValue({ changes: 1, lastInsertRowid: 1 })
+    allMock.mockResolvedValueOnce([{ hash: 'a' }])
 
     await initDB({ migrations: makeMigrations() })
 
-    expect(queryMock).not.toHaveBeenCalledWith('CREATE TABLE a (id INTEGER)')
-    expect(queryMock).toHaveBeenCalledWith('CREATE TABLE b (id INTEGER)')
+    expect(execMock).not.toHaveBeenCalledWith('CREATE TABLE a (id INTEGER)')
+    expect(execMock).toHaveBeenCalledWith('CREATE TABLE b (id INTEGER)')
   })
 
   it('records each applied migration with hash and numeric timestamp', async () => {
@@ -69,7 +69,7 @@ describe('initDB', () => {
       migrations: [{ hash: 'h1', folderMillis: 100, sql: ['CREATE TABLE t (id INTEGER)'], bps: false }]
     })
 
-    expect(queryMock).toHaveBeenCalledWith(
+    expect(execMock).toHaveBeenCalledWith(
       'INSERT INTO __porth_migrations (hash, applied_at) VALUES (?, ?)',
       ['h1', 123456]
     )
@@ -78,9 +78,9 @@ describe('initDB', () => {
 
   it('throws with clear message when a migration statement fails', async () => {
     const { initDB } = await getMigratorModule()
-    queryMock
-      .mockResolvedValueOnce({ changes: 0, lastInsertRowid: 0 })
-      .mockResolvedValueOnce([])
+    execMock
+      .mockResolvedValueOnce(undefined)
+      .mockResolvedValueOnce(undefined)
       .mockRejectedValueOnce(new Error('near "FAIL": syntax error'))
 
     await expect(
@@ -92,9 +92,9 @@ describe('initDB', () => {
 
   it('includes migration tag when a tagged migration statement fails', async () => {
     const { initDB } = await getMigratorModule()
-    queryMock
-      .mockResolvedValueOnce({ changes: 0, lastInsertRowid: 0 })
-      .mockResolvedValueOnce([])
+    execMock
+      .mockResolvedValueOnce(undefined)
+      .mockResolvedValueOnce(undefined)
       .mockRejectedValueOnce(new Error('near "FAIL": syntax error'))
 
     await expect(
@@ -110,19 +110,17 @@ describe('initDB', () => {
     const { initDB } = await getMigratorModule()
     const appliedHashes = new Set<string>()
 
-    queryMock.mockImplementation(async (sql: string, params?: unknown[]) => {
-      if (sql.startsWith('CREATE TABLE IF NOT EXISTS')) {
-        return { changes: 0, lastInsertRowid: 0 }
-      }
+    allMock.mockImplementation(async (sql: string) => {
       if (sql.startsWith('SELECT hash FROM')) {
         return [...appliedHashes].map((hash) => ({ hash }))
       }
+      return []
+    })
+    execMock.mockImplementation(async (sql: string, params?: unknown[]) => {
       if (sql.startsWith('INSERT INTO __porth_migrations')) {
-        const hash = String(params?.[0] ?? '')
-        appliedHashes.add(hash)
-        return { changes: 1, lastInsertRowid: 1 }
+        appliedHashes.add(String(params?.[0] ?? ''))
       }
-      return { changes: 0, lastInsertRowid: 0 }
+      return undefined
     })
 
     const config = {
@@ -132,7 +130,7 @@ describe('initDB', () => {
     await initDB(config)
     await initDB(config)
 
-    const migrationSqlCalls = queryMock.mock.calls.filter(([sql]) => sql === 'CREATE TABLE once (id INTEGER)')
+    const migrationSqlCalls = execMock.mock.calls.filter(([sql]) => sql === 'CREATE TABLE once (id INTEGER)')
     expect(migrationSqlCalls).toHaveLength(1)
   })
 
@@ -144,9 +142,9 @@ describe('initDB', () => {
       migrations: [{ hash: 'c1', folderMillis: 1, sql: ['CREATE TABLE x (id INTEGER)'], bps: false }]
     })
 
-    expect(queryMock.mock.calls[0]?.[0]).toContain('CREATE TABLE IF NOT EXISTS custom_migrations')
-    expect(queryMock.mock.calls[1]?.[0]).toBe('SELECT hash FROM custom_migrations')
-    expect(queryMock.mock.calls[4]?.[0]).toBe('INSERT INTO custom_migrations (hash, applied_at) VALUES (?, ?)')
+    expect(execMock.mock.calls[0]?.[0]).toContain('CREATE TABLE IF NOT EXISTS custom_migrations')
+    expect(allMock.mock.calls[0]?.[0]).toBe('SELECT hash FROM custom_migrations')
+    expect(execMock.mock.calls[3]?.[0]).toBe('INSERT INTO custom_migrations (hash, applied_at) VALUES (?, ?)')
   })
 
   it('rejects invalid custom migrationsTable names', async () => {
@@ -155,7 +153,8 @@ describe('initDB', () => {
     await expect(initDB({ migrationsTable: 'bad; DROP TABLE notes', migrations: [] })).rejects.toThrow(
       'porth migration table name is invalid: bad; DROP TABLE notes'
     )
-    expect(queryMock).not.toHaveBeenCalled()
+    expect(execMock).not.toHaveBeenCalled()
+    expect(allMock).not.toHaveBeenCalled()
   })
 
   it('applies multiple SQL statements in a migration sequentially', async () => {
@@ -172,10 +171,10 @@ describe('initDB', () => {
       ]
     })
 
-    expect(queryMock.mock.calls[2]?.[0]).toBe('BEGIN')
-    expect(queryMock.mock.calls[3]?.[0]).toBe('CREATE TABLE one (id INTEGER)')
-    expect(queryMock.mock.calls[4]?.[0]).toBe('ALTER TABLE one ADD COLUMN name TEXT')
-    expect(queryMock.mock.calls[5]?.[0]).toBe('INSERT INTO __porth_migrations (hash, applied_at) VALUES (?, ?)')
-    expect(queryMock.mock.calls[6]?.[0]).toBe('COMMIT')
+    expect(execMock.mock.calls[1]?.[0]).toBe('BEGIN')
+    expect(execMock.mock.calls[2]?.[0]).toBe('CREATE TABLE one (id INTEGER)')
+    expect(execMock.mock.calls[3]?.[0]).toBe('ALTER TABLE one ADD COLUMN name TEXT')
+    expect(execMock.mock.calls[4]?.[0]).toBe('INSERT INTO __porth_migrations (hash, applied_at) VALUES (?, ?)')
+    expect(execMock.mock.calls[5]?.[0]).toBe('COMMIT')
   })
 })

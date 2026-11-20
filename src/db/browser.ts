@@ -6,10 +6,19 @@ interface SqlJsExecResult {
   values: unknown[][]
 }
 
+interface SqlJsStatement {
+  bind(params?: unknown[]): boolean
+  step(): boolean
+  getAsObject(): Record<string, unknown>
+  getColumnNames(): string[]
+  free(): void
+}
+
 interface SqlJsDatabase {
   exec(sql: string, params?: unknown[]): SqlJsExecResult[]
   run(sql: string, params?: unknown[]): void
   getRowsModified(): number
+  prepare(sql: string): SqlJsStatement
 }
 
 interface SqlJsStatic {
@@ -22,16 +31,6 @@ type DrizzleResult = { rows: unknown[] }
 
 declare global {
   var __porthSqlJsInit: SqlJsInit | undefined
-}
-
-function mapSelectRows(result: SqlJsExecResult): Record<string, unknown>[] {
-  return result.values.map((row) => {
-    const mapped: Record<string, unknown> = {}
-    for (let idx = 0; idx < result.columns.length; idx += 1) {
-      mapped[result.columns[idx]] = row[idx]
-    }
-    return mapped
-  })
 }
 
 async function loadSqlJsInit(): Promise<SqlJsInit> {
@@ -65,27 +64,64 @@ export class BrowserDB {
     return this.dbPromise
   }
 
-  async query<T = unknown>(sql: string, params?: unknown[]): Promise<T> {
+  async all<T = unknown>(sql: string, params?: unknown[]): Promise<T[]> {
+    const db = await this.getDB()
+    const stmt = db.prepare(sql)
     try {
-      const db = await this.getDB()
-      const statementType = sql.trim().split(/\s+/, 1)[0]?.toUpperCase() ?? ''
-
-      if (statementType === 'SELECT') {
-        const results = db.exec(sql, params)
-        if (results.length === 0) {
-          return [] as T
-        }
-        return mapSelectRows(results[0]) as T
+      if (params?.length) {
+        stmt.bind(params)
       }
+      const rows: Record<string, unknown>[] = []
+      if (stmt.getColumnNames().length > 0) {
+        while (stmt.step()) {
+          rows.push(stmt.getAsObject())
+        }
+      } else {
+        stmt.step()
+      }
+      return rows as T[]
+    } finally {
+      stmt.free()
+    }
+  }
 
-      db.run(sql, params)
+  async run(sql: string, params?: unknown[]): Promise<{ changes: number }> {
+    const db = await this.getDB()
+    const stmt = db.prepare(sql)
+    try {
+      if (params?.length) {
+        stmt.bind(params)
+      }
+      stmt.step()
+      return { changes: db.getRowsModified() }
+    } finally {
+      stmt.free()
+    }
+  }
+
+  async insert(sql: string, params?: unknown[]): Promise<{ changes: number; lastInsertRowid: number }> {
+    const db = await this.getDB()
+    const stmt = db.prepare(sql)
+    try {
+      if (params?.length) {
+        stmt.bind(params)
+      }
+      stmt.step()
       const changes = db.getRowsModified()
       const lastInsertRows = db.exec('SELECT last_insert_rowid()')
       const lastInsertRowid = Number(lastInsertRows[0]?.values[0]?.[0] ?? 0)
-      return { changes, lastInsertRowid } as T
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error)
-      throw new Error(message)
+      return { changes, lastInsertRowid }
+    } finally {
+      stmt.free()
+    }
+  }
+
+  async exec(sql: string, params?: unknown[]): Promise<void> {
+    const db = await this.getDB()
+    if (params?.length) {
+      db.run(sql, params)
+    } else {
+      db.exec(sql)
     }
   }
 
