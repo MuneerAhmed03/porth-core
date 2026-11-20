@@ -7,7 +7,7 @@ declare global {
           storageDelete(key: string): string
           storageClear(): string
           storageKeys(): string
-          dbQuery(sql: string, paramsJson: string | null): string
+          dbQuery(sql: string, paramsJson: string | null, mode: string): string
           dbQueryRaw(sql: string, paramsJson: string | null, method: string): string
         }
       | undefined
