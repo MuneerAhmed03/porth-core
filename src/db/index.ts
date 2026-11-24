@@ -1,15 +1,14 @@
 import { isAndroid } from '../bridge'
+import type { DrizzleMethod, DrizzleResult, InsertResult, RunResult } from './types'
 import { AndroidDB } from './android'
 import { BrowserDB } from './browser'
 
-type DrizzleMethod = 'run' | 'all' | 'values' | 'get'
-
 type DBImpl = {
   all<T = unknown>(sql: string, params?: unknown[]): Promise<T[]>
-  run(sql: string, params?: unknown[]): Promise<{ changes: number }>
-  insert(sql: string, params?: unknown[]): Promise<{ changes: number; lastInsertRowid: number }>
+  run(sql: string, params?: unknown[]): Promise<RunResult>
+  insert(sql: string, params?: unknown[]): Promise<InsertResult>
   exec(sql: string, params?: unknown[]): Promise<void>
-  drizzleQuery(sql: string, params: unknown[], method: DrizzleMethod): Promise<{ rows: unknown[] }>
+  drizzleQuery(sql: string, params: unknown[], method: DrizzleMethod): Promise<DrizzleResult>
 }
 
 const useAndroid = isAndroid()
@@ -20,11 +19,11 @@ export const DB = {
     return impl.all<T>(sql, params)
   },
 
-  run(sql: string, params?: unknown[]): Promise<{ changes: number }> {
+  run(sql: string, params?: unknown[]): Promise<RunResult> {
     return impl.run(sql, params)
   },
 
-  insert(sql: string, params?: unknown[]): Promise<{ changes: number; lastInsertRowid: number }> {
+  insert(sql: string, params?: unknown[]): Promise<InsertResult> {
     return impl.insert(sql, params)
   },
 
@@ -37,7 +36,7 @@ export const DB = {
     sql: string,
     params: unknown[] = [],
     method: DrizzleMethod
-  ): Promise<{ rows: unknown[] }> {
+  ): Promise<DrizzleResult> {
     return impl.drizzleQuery(sql, params, method)
   }
 }

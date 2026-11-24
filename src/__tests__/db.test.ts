@@ -7,7 +7,7 @@ const require = createRequire(import.meta.url)
 const wasmPath = path.join(path.dirname(require.resolve('sql.js')), 'sql-wasm.wasm')
 
 beforeAll(async () => {
-  const SQL = await initSqlJs({ locateFile: () => wasmPath })
+  const SQL = await initSqlJs({ locateFile: () => wasmPath, useOldExtensionFunctions: true })
   globalThis.__porthSqlJsInit = () => Promise.resolve(SQL)
 })
 
@@ -36,6 +36,32 @@ describe('DB browser fallback (sql.js)', () => {
     await DB.exec('CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT)')
     const result = await DB.insert('INSERT INTO users (name) VALUES (?)', ['Alice'])
     expect(result).toEqual({ changes: 1, lastInsertRowid: 1 })
+  })
+
+  it('insert counts multiple rows', async () => {
+    const DB = await getDBModule()
+    await DB.exec('CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT)')
+    const result = await DB.insert("INSERT INTO users (name) VALUES ('a'), ('b')")
+    expect(result.changes).toBe(2)
+  })
+
+  it('insert OR IGNORE on conflict returns zero changes and rowid', async () => {
+    const DB = await getDBModule()
+    await DB.exec('CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT UNIQUE)')
+    await DB.insert('INSERT INTO users (name) VALUES (?)', ['Alice'])
+    const ignored = await DB.insert('INSERT OR IGNORE INTO users (name) VALUES (?)', ['Alice'])
+    expect(ignored).toEqual({ changes: 0, lastInsertRowid: 0 })
+  })
+
+  it('insert ON CONFLICT DO NOTHING returns zero changes and rowid', async () => {
+    const DB = await getDBModule()
+    await DB.exec('CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT UNIQUE)')
+    await DB.insert('INSERT INTO users (name) VALUES (?)', ['Alice'])
+    const ignored = await DB.insert(
+      'INSERT INTO users (name) VALUES (?) ON CONFLICT (name) DO NOTHING',
+      ['Alice']
+    )
+    expect(ignored).toEqual({ changes: 0, lastInsertRowid: 0 })
   })
 
   it('all returns rows with column names', async () => {

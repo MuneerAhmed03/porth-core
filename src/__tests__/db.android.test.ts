@@ -52,11 +52,11 @@ describe('AndroidDB', () => {
     expect(result).toEqual(rows)
   })
 
-  it('run uses run mode and returns changes object', async () => {
+  it('run uses run mode and returns only the declared changes shape', async () => {
     bridge.dbQuery.mockReturnValueOnce(JSON.stringify({ changes: 2, lastInsertRowid: 0 }))
     const result = await db.run('UPDATE users SET age = ?', [31])
     expect(bridge.dbQuery).toHaveBeenCalledWith('UPDATE users SET age = ?', '[31]', 'run')
-    expect(result).toEqual({ changes: 2, lastInsertRowid: 0 })
+    expect(result).toEqual({ changes: 2 })
   })
 
   it('insert uses insert mode and returns rowid object', async () => {

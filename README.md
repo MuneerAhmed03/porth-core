@@ -29,7 +29,7 @@ await DB.exec(
 )
 
 const { lastInsertRowid } = await DB.insert('INSERT INTO notes (title) VALUES (?)', ['First note'])
-const notes = await DB.all<Array<{ id: number; title: string }>>('SELECT * FROM notes')
+const notes = await DB.all<{ id: number; title: string }>('SELECT * FROM notes')
 ```
 
 - `DB.all(sql, params)` returns rows (also handles CTEs, `PRAGMA`, and `RETURNING`).
