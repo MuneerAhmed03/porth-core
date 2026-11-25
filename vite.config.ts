@@ -26,7 +26,7 @@ export default defineConfig(({ mode }) => {
       emptyOutDir: !isDrizzle,
       sourcemap: true
     },
-    plugins: [dts({ include: ['src'] })],
+    plugins: [dts({ include: ['src'], exclude: ['src/__tests__'] })],
     test: {
       environment: 'node'
     }

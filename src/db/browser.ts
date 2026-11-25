@@ -1,37 +1,19 @@
+import type initSqlJs from 'sql.js'
+import type { DrizzleMethod, DrizzleResult, InsertResult, RunResult } from './types'
+
+type SqlJsStatic = initSqlJs.SqlJsStatic
+type SqlJsDatabase = initSqlJs.Database
+type SqlJsStatement = initSqlJs.Statement
+type SqlJsBindParams = initSqlJs.BindParams
+type SqlJsConfig = initSqlJs.SqlJsConfig
+
 const SQL_JS_URL = 'https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.2/sql-wasm.js'
 const SQL_JS_WASM_URL = 'https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.2/sql-wasm.wasm'
 
-interface SqlJsExecResult {
-  columns: string[]
-  values: unknown[][]
-}
-
-interface SqlJsDatabase {
-  exec(sql: string, params?: unknown[]): SqlJsExecResult[]
-  run(sql: string, params?: unknown[]): void
-  getRowsModified(): number
-}
-
-interface SqlJsStatic {
-  Database: new () => SqlJsDatabase
-}
-
-type SqlJsInit = (config: { locateFile: (file: string) => string }) => Promise<SqlJsStatic>
-type DrizzleMethod = 'run' | 'all' | 'values' | 'get'
-type DrizzleResult = { rows: unknown[] }
+type SqlJsInit = (config: SqlJsConfig) => Promise<SqlJsStatic>
 
 declare global {
   var __porthSqlJsInit: SqlJsInit | undefined
-}
-
-function mapSelectRows(result: SqlJsExecResult): Record<string, unknown>[] {
-  return result.values.map((row) => {
-    const mapped: Record<string, unknown> = {}
-    for (let idx = 0; idx < result.columns.length; idx += 1) {
-      mapped[result.columns[idx]] = row[idx]
-    }
-    return mapped
-  })
 }
 
 async function loadSqlJsInit(): Promise<SqlJsInit> {
@@ -58,34 +40,70 @@ export class BrowserDB {
     if (!this.dbPromise) {
       this.dbPromise = (async () => {
         const initSqlJs = await loadSqlJsInit()
-        const SQL = await initSqlJs({ locateFile: () => SQL_JS_WASM_URL })
+        const SQL = await initSqlJs({ locateFile: () => SQL_JS_WASM_URL, useOldExtensionFunctions: true })
         return new SQL.Database()
       })()
     }
     return this.dbPromise
   }
 
-  async query<T = unknown>(sql: string, params?: unknown[]): Promise<T> {
+  private async withStatement<T>(
+    sql: string,
+    params: unknown[] | undefined,
+    action: (db: SqlJsDatabase, stmt: SqlJsStatement) => T
+  ): Promise<T> {
+    const db = await this.getDB()
+    const stmt = db.prepare(sql)
     try {
-      const db = await this.getDB()
-      const statementType = sql.trim().split(/\s+/, 1)[0]?.toUpperCase() ?? ''
-
-      if (statementType === 'SELECT') {
-        const results = db.exec(sql, params)
-        if (results.length === 0) {
-          return [] as T
-        }
-        return mapSelectRows(results[0]) as T
+      if (params?.length) {
+        stmt.bind(params as SqlJsBindParams)
       }
+      return action(db, stmt)
+    } finally {
+      stmt.free()
+    }
+  }
 
-      db.run(sql, params)
+  all<T = unknown>(sql: string, params?: unknown[]): Promise<T[]> {
+    return this.withStatement(sql, params, (_db, stmt) => {
+      const rows: Record<string, unknown>[] = []
+      if (stmt.getColumnNames().length > 0) {
+        while (stmt.step()) {
+          rows.push(stmt.getAsObject())
+        }
+      } else {
+        stmt.step()
+      }
+      return rows as T[]
+    })
+  }
+
+  run(sql: string, params?: unknown[]): Promise<RunResult> {
+    return this.withStatement(sql, params, (db, stmt) => {
+      stmt.step()
+      return { changes: db.getRowsModified() }
+    })
+  }
+
+  insert(sql: string, params?: unknown[]): Promise<InsertResult> {
+    return this.withStatement(sql, params, (db, stmt) => {
+      stmt.step()
       const changes = db.getRowsModified()
+      if (changes === 0) {
+        return { changes: 0, lastInsertRowid: 0 }
+      }
       const lastInsertRows = db.exec('SELECT last_insert_rowid()')
       const lastInsertRowid = Number(lastInsertRows[0]?.values[0]?.[0] ?? 0)
-      return { changes, lastInsertRowid } as T
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error)
-      throw new Error(message)
+      return { changes, lastInsertRowid }
+    })
+  }
+
+  async exec(sql: string, params?: unknown[]): Promise<void> {
+    const db = await this.getDB()
+    if (params?.length) {
+      db.run(sql, params as SqlJsBindParams)
+    } else {
+      db.exec(sql)
     }
   }
 
@@ -94,11 +112,11 @@ export class BrowserDB {
       const db = await this.getDB()
 
       if (method === 'run') {
-        db.run(sql, params)
+        db.run(sql, params as SqlJsBindParams)
         return { rows: [] }
       }
 
-      const results = db.exec(sql, params)
+      const results = db.exec(sql, params as SqlJsBindParams)
       const rows = results[0]?.values ?? []
       return method === 'get' ? { rows: rows[0] ?? [] } : { rows }
     } catch (error) {

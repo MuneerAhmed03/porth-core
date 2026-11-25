@@ -1,3 +1,5 @@
+import type { QueryMode } from './db/types'
+
 declare global {
   interface Window {
     AndroidBridge:
@@ -7,7 +9,7 @@ declare global {
           storageDelete(key: string): string
           storageClear(): string
           storageKeys(): string
-          dbQuery(sql: string, paramsJson: string | null): string
+          dbQuery(sql: string, paramsJson: string | null, mode: QueryMode): string
           dbQueryRaw(sql: string, paramsJson: string | null, method: string): string
         }
       | undefined

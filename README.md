@@ -24,13 +24,18 @@ const theme = await Storage.get<string>('theme')
 ```ts
 import { DB } from 'porth-core'
 
-await DB.query(
+await DB.exec(
   'CREATE TABLE IF NOT EXISTS notes (id INTEGER PRIMARY KEY, title TEXT NOT NULL)'
 )
 
-await DB.query('INSERT INTO notes (title) VALUES (?)', ['First note'])
-const notes = await DB.query<Array<{ id: number; title: string }>>('SELECT * FROM notes')
+const { lastInsertRowid } = await DB.insert('INSERT INTO notes (title) VALUES (?)', ['First note'])
+const notes = await DB.all<{ id: number; title: string }>('SELECT * FROM notes')
 ```
+
+- `DB.all(sql, params)` returns rows (also handles CTEs, `PRAGMA`, and `RETURNING`).
+- `DB.run(sql, params)` returns `{ changes }` for `UPDATE`/`DELETE`.
+- `DB.insert(sql, params)` returns `{ changes, lastInsertRowid }`.
+- `DB.exec(sql, params?)` runs DDL and statements without a result.
 
 The browser build uses `sql.js`; Android uses the device SQLite through the Porth shell.
 

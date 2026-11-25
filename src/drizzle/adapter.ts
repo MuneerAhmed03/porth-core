@@ -1,11 +1,10 @@
 import { DB } from '../db/index'
+import type { DrizzleMethod, DrizzleResult } from '../db/types'
 import { drizzle as drizzleSqliteProxy } from 'drizzle-orm/sqlite-proxy'
 import type { SqliteRemoteDatabase } from 'drizzle-orm/sqlite-proxy'
 import { initDB } from './migrator'
 import type { MigrationConfig } from './types'
 
-type DrizzleMethod = 'run' | 'all' | 'values' | 'get'
-type DrizzleResult = { rows: unknown[] }
 type DrizzleQuery = (sql: string, params: unknown[], method: DrizzleMethod) => Promise<DrizzleResult>
 type DrizzleBatchQuery = (queries: { sql: string; params: unknown[]; method: DrizzleMethod }[]) => Promise<DrizzleResult[]>
 

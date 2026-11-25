@@ -2,8 +2,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { eq, sql } from 'drizzle-orm'
 import { integer, sqliteTable, text } from 'drizzle-orm/sqlite-core'
 
-const { queryMock, drizzleQueryMock } = vi.hoisted(() => ({
-  queryMock: vi.fn<[string, unknown[]?], Promise<unknown>>(),
+const { execMock, allMock, drizzleQueryMock } = vi.hoisted(() => ({
+  execMock: vi.fn<[string, unknown[]?], Promise<unknown>>(),
+  allMock: vi.fn<[string, unknown[]?], Promise<unknown>>(),
   drizzleQueryMock: vi.fn<
     [string, unknown[], 'run' | 'all' | 'values' | 'get'],
     Promise<{ rows: unknown[] }>
@@ -12,7 +13,8 @@ const { queryMock, drizzleQueryMock } = vi.hoisted(() => ({
 
 vi.mock('../../db/index', () => ({
   DB: {
-    query: queryMock,
+    exec: execMock,
+    all: allMock,
     __drizzleQuery: drizzleQueryMock
   }
 }))
@@ -33,7 +35,8 @@ async function getAdapterModule() {
 describe('drizzle adapter', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    queryMock.mockResolvedValue([])
+    execMock.mockResolvedValue(undefined)
+    allMock.mockResolvedValue([])
     drizzleQueryMock.mockResolvedValue({ rows: [] })
   })
 
@@ -162,8 +165,8 @@ describe('drizzle adapter', () => {
 
     await db.select({ id: notes.id }).from(notes)
 
-    expect(queryMock.mock.calls[0]?.[0]).toContain('CREATE TABLE IF NOT EXISTS __porth_migrations')
-    expect(queryMock).toHaveBeenCalledWith('CREATE TABLE notes (id INTEGER)')
+    expect(execMock.mock.calls[0]?.[0]).toContain('CREATE TABLE IF NOT EXISTS __porth_migrations')
+    expect(execMock).toHaveBeenCalledWith('CREATE TABLE notes (id INTEGER)')
     expect(drizzleQueryMock).toHaveBeenCalledTimes(1)
   })
 
@@ -177,7 +180,7 @@ describe('drizzle adapter', () => {
     await db.select().from(notes)
     await db.insert(notes).values({ title: 'hello', body: 'body', createdAt: 100 })
 
-    const migrationTableCreates = queryMock.mock.calls.filter(([statement]) =>
+    const migrationTableCreates = execMock.mock.calls.filter(([statement]) =>
       statement.includes('CREATE TABLE IF NOT EXISTS __porth_migrations')
     )
     expect(migrationTableCreates).toHaveLength(1)

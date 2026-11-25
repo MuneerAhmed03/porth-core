@@ -13,7 +13,7 @@
  *
  * Without drizzle (raw SQL):
  *   import { DB } from 'porth-core'
- *   await DB.query('SELECT * FROM notes')
+ *   await DB.all('SELECT * FROM notes')
  *
  * Both approaches use the same underlying SQLite database on device.
  */
